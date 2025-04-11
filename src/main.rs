@@ -1,4 +1,4 @@
-use std::{env, fs, path::Path, io};
+use std::{env, fs, path::Path, io, process::Command};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
@@ -166,7 +166,7 @@ impl App {
             Constraint::Percentage(30),
             Constraint::Length(3)
         );
-        let popup = Paragraph::new(Text::raw(&self.filter_query)).block(Block::bordered().title("Filter"));
+        let popup = Paragraph::new(Text::raw(&self.filter_query)).block(Block::bordered().title(Line::from(" Filter ").centered()));
         Clear.render(popup_area, buf);
         popup.render(popup_area, buf)
     }
@@ -176,7 +176,12 @@ impl App {
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from(" COMRAD ".bold());
-        let instructions = Line::from(vec![
+        let filter_instructions = Line::from(vec![
+            " Exit filter ".into(),
+            "<Esc/Enter>".blue().bold(),
+            ]);
+            
+        let general_instructions = Line::from(vec![
             " Down ".into(),
             "<j>".blue().bold(),
             " Up ".into(),
@@ -189,8 +194,9 @@ impl Widget for &mut App {
             "</>".blue().bold(),
             " Quit ".into(),
             "<q> ".blue().bold(),
-
-        ]);
+            ]);
+        
+        let instructions = if self.filter_mode { filter_instructions.clone() } else { general_instructions.clone() };
         let block = Block::bordered()
             .title(title.centered())
             .title_bottom(instructions.centered())
@@ -206,14 +212,9 @@ impl Widget for &mut App {
             .block(block)
             .highlight_symbol(">> ")
             .highlight_spacing(HighlightSpacing::Always);
-            // .render(area, buf);
         
         StatefulWidget::render(list, area, buf, &mut self.list_state);
 
         self.render_filter_popup(area, buf);
-        // Paragraph::new(example_text)
-            // .centered()
-            // .block(block)
-            // .render(area, buf);
     }
 }
