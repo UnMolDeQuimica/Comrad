@@ -21,18 +21,11 @@ pub struct App {
     commands: Vec<String>,
     list_state: ratatui::widgets::ListState,
     exit: bool,
+    filter_mode: bool,
+    filter_query: String,
 }
 
 impl App {
-    fn new(commands: Vec<String>) -> App {
-        let mut list_state = ratatui::widgets::ListState::default();
-        list_state.select(Some(0));
-        App {
-            commands,
-            list_state,
-            exit: false,
-        }
-    }
 
     fn next(&mut self) {
         let i = self.list_state.selected().unwrap();
@@ -75,8 +68,6 @@ impl App {
 
     fn handle_events(&mut self) -> io::Result<()> {
         match event::read()? {
-            // it's important to check that the event is a key press event as
-            // crossterm also emits key release and repeat events on Windows.
             Event::Key(key_event) if key_event.kind == KeyEventKind::Press => {
                 self.handle_key_event(key_event)
             }
@@ -86,15 +77,43 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        match key_event.code {
-            KeyCode::Char('q') => self.exit(),
-            KeyCode::Char('g') => self.first(),
-            KeyCode::Char('G') => self.last(),
-            KeyCode::Char('j') => self.previous(),
-            KeyCode::Char('k') => self.next(),
-            KeyCode::Up => self.previous(),
-            KeyCode::Down => self.next(),
-            _ => {}
+        if !self.filter_mode {
+
+            match key_event.code {
+                KeyCode::Char('q') => self.exit(),
+                KeyCode::Char('g') => self.first(),
+                KeyCode::Char('G') => self.last(),
+                KeyCode::Char('j') => self.previous(),
+                KeyCode::Char('k') => self.next(),
+                KeyCode::Char('/') => {
+                    self.filter_mode = true;
+                    // self.update_filter();
+                },
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
+                _ => {}
+            }
+        }
+
+        else {
+            match key_event.code {
+                KeyCode::Enter if self.filter_mode => {
+                    self.filter_mode = false;
+                    // self.update_filter();
+                },
+
+                KeyCode::Char(c) => {
+                    self.filter_query.push(c);
+                    // self.update_filter();
+                }
+
+                KeyCode::Backspace => {
+                    self.filter_query.pop();
+                    // self.update_filter();
+                }
+
+                _ => {}
+            }
         }
     }
 
@@ -147,7 +166,11 @@ impl Widget for &mut App {
             .title_bottom(instructions.centered())
             .border_set(border::THICK);
 
-        let commands = self.commands.iter().map(|c| ListItem::new(c.as_str()));
+        let commands = self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase()))
+            .map(|c| ListItem::new(c.as_str()));
 
         let list =List::new(commands)
             .block(block)
