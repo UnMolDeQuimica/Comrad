@@ -7,6 +7,8 @@ use ratatui::{
         Color, Modifier, Style, Stylize,
     }, symbols::border, text::{Line, Text}, widgets::{Block, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, HighlightSpacing}, DefaultTerminal, Frame
 };
+
+const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
 fn main() -> io::Result<()> {
     let mut terminal = ratatui::init();
     let app_result = App::default().run(&mut terminal);
@@ -20,6 +22,7 @@ pub struct App {
     list_state: ratatui::widgets::ListState,
     exit: bool,
 }
+
 impl App {
     fn new(commands: Vec<String>) -> App {
         let mut list_state = ratatui::widgets::ListState::default();
@@ -30,6 +33,29 @@ impl App {
             exit: false,
         }
     }
+
+    fn next(&mut self) {
+        let i = self.list_state.selected().unwrap();
+        if i < self.commands.len() - 1 {
+            self.list_state.select((Some(i + 1)));
+        }
+    }
+
+    fn previous(&mut self) {
+        let i = self.list_state.selected().unwrap();
+        if i > 0 {
+            self.list_state.select((Some(i - 1)));
+        }
+    }
+
+    fn first(&mut self) {
+        self.list_state.select_first();
+    }
+
+    fn last(&mut self) {
+        self.list_state.select_last();
+    }
+
     pub fn run(&mut self, terminal: &mut DefaultTerminal) -> io::Result<()> {
         self.commands = self.get_commands();
 
@@ -62,9 +88,16 @@ impl App {
     fn handle_key_event(&mut self, key_event: KeyEvent) {
         match key_event.code {
             KeyCode::Char('q') => self.exit(),
+            KeyCode::Char('g') => self.first(),
+            KeyCode::Char('G') => self.last(),
+            KeyCode::Char('j') => self.previous(),
+            KeyCode::Char('k') => self.next(),
+            KeyCode::Up => self.previous(),
+            KeyCode::Down => self.next(),
             _ => {}
         }
     }
+
     fn exit(&mut self) {
         self.exit = true;
     }
@@ -90,10 +123,21 @@ impl App {
         commands.dedup();
         commands
     }
+
+}
+
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let title = Line::from(" Comrad ".bold());
         let instructions = Line::from(vec![
+            " Down ".into(),
+            "<j>".blue().bold(),
+            " Up ".into(),
+            "<k>".blue().bold(),
+            " First ".into(),
+            "<g> ".blue().bold(),
+            " Last ".into(),
+            "<G> ".blue().bold(),
             " Quit ".into(),
             "<q> ".blue().bold(),
 
