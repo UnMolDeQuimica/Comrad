@@ -2,10 +2,10 @@ use std::{env, fs, path::Path, io};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
 use ratatui::{
-    buffer::Buffer, layout::Rect, style::{
+    buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{
         palette::tailwind::{BLUE, GREEN, SLATE},
         Color, Modifier, Style, Stylize,
-    }, symbols::border, text::{Line, Text}, widgets::{Block, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, HighlightSpacing}, DefaultTerminal, Frame
+    }, symbols::border, text::{Line, Text}, widgets::{Block, HighlightSpacing, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, Wrap, Clear}, DefaultTerminal, Frame
 };
 
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
@@ -99,17 +99,22 @@ impl App {
             match key_event.code {
                 KeyCode::Enter if self.filter_mode => {
                     self.filter_mode = false;
+                    self.list_state.select(Some(0));
                     // self.update_filter();
                 },
 
                 KeyCode::Char(c) => {
                     self.filter_query.push(c);
                     // self.update_filter();
-                }
+                },
 
                 KeyCode::Backspace => {
                     self.filter_query.pop();
                     // self.update_filter();
+                },
+                KeyCode::Esc => {
+                    self.filter_mode = false;
+                    self.list_state.select(Some(0));
                 }
 
                 _ => {}
@@ -143,11 +148,34 @@ impl App {
         commands
     }
 
+    fn center(&mut self, area: Rect, horizontal: Constraint, vertical: Constraint) -> Rect {
+        let [area] = Layout::horizontal([horizontal])
+            .flex(Flex::Center)
+            .areas(area);
+        let [area] = Layout::vertical([vertical]).margin(3).areas(area);
+        area
+    }
+
+    fn render_filter_popup(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.filter_mode {
+            return
+        };
+
+        let popup_area = self.center(
+            area,
+            Constraint::Percentage(30),
+            Constraint::Length(3)
+        );
+        let popup = Paragraph::new(Text::raw(&self.filter_query)).block(Block::bordered().title("Filter"));
+        Clear.render(popup_area, buf);
+        popup.render(popup_area, buf)
+    }
+
 }
 
 impl Widget for &mut App {
     fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Line::from(" Comrad ".bold());
+        let title = Line::from(" COMRAD ".bold());
         let instructions = Line::from(vec![
             " Down ".into(),
             "<j>".blue().bold(),
@@ -157,6 +185,8 @@ impl Widget for &mut App {
             "<g> ".blue().bold(),
             " Last ".into(),
             "<G> ".blue().bold(),
+            " Filter ".into(),
+            "</>".blue().bold(),
             " Quit ".into(),
             "<q> ".blue().bold(),
 
@@ -180,7 +210,7 @@ impl Widget for &mut App {
         
         StatefulWidget::render(list, area, buf, &mut self.list_state);
 
-
+        self.render_filter_popup(area, buf);
         // Paragraph::new(example_text)
             // .centered()
             // .block(block)
