@@ -8,14 +8,43 @@ use ratatui::{
     }, symbols::border, text::{Line, Text}, widgets::{Block, HighlightSpacing, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, Clear}, DefaultTerminal, Frame
 };
 
+use clap::Parser;
+
+#[derive(Parser)]
+#[command(name = "comrad", version, about, long_about = r#"
+A simple TUI tool made with [ratatui](https://ratatui.rs/) that shows all the terminal commands available in your computer.
+
+Run the `comrad` command to enter the TUI.
+
+- You can move up and down with j and k or using the up and down arrow keys.
+- You can go to the first entry pressing 'g' and to the last entry pressing 'G'.
+- Press '/' to enter filter mode.
+- Press 'm' to show the `man` page of the current command (only available if you have `man` installed).
+- Press 'M' to enter the `man` page of the current command (only available if you have `man` installed).
+- Press 't' to show the `tldr` page of the current command (only available if you have `tldr` installed).
+- Press 'q' to exit comrad.
+"#
+)]
+struct Cli {
+}
+
+
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
-fn main() -> io::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let _cli = Cli::parse();
+
+    run_ui()?;
+
+    Ok(())
+}
+
+
+fn run_ui() -> io::Result<()> {
     let mut terminal = ratatui::init();
     let app_result = App::default().run(&mut terminal);
     ratatui::restore();
     app_result
 }
-
 #[derive(Debug, Default)]
 pub struct App {
     commands: Vec<String>,
