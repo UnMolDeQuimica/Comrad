@@ -21,7 +21,7 @@ cargo build --release
 
 3. Install it globally
 ```
-cargo install --path
+cargo install --path .
 ```
 
 4. Run comrad
