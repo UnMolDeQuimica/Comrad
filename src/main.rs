@@ -1,7 +1,7 @@
 use core::str;
-use std::{env, fs, path::Path, io, process::Command};
+use std::{env, fs, io, process::Command};
 
-use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
+use crossterm::{event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen, EnterAlternateScreen}};
 use ratatui::{
     buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{
         palette::tailwind::{BLUE, GREEN, SLATE},
@@ -25,6 +25,9 @@ pub struct App {
     filter_mode: bool,
     filter_query: String,
     show_man_help: bool,
+    show_tldr_help: bool,
+    add_to_tldr_state: bool,
+    tldr_command: String,
 }
 
 impl App {
@@ -99,7 +102,7 @@ impl App {
                 KeyCode::Esc => {
                     self.filter_mode = false;
                     self.list_state.select(Some(0));
-                }
+                },
 
                 _ => {}
             }
@@ -109,9 +112,35 @@ impl App {
                 KeyCode::Esc => {
                     self.show_man_help = false;
                     // self.list_state.select(Some(0));
-                }
+                },
 
                 _ => {}
+            }
+        }
+        else if self.show_tldr_help {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_tldr_help = false;
+                    // self.list_state.select(Some(0));
+                },
+
+                _ => {}
+            }
+        }
+        else if self.add_to_tldr_state {
+            match key_event.code {
+                KeyCode::Char('y') => {
+                    self.add_to_tldr_cache();
+                    self.add_to_tldr_state = false;
+                },
+                KeyCode::Char('Y') => {
+                    self.add_to_tldr_cache();
+                    self.add_to_tldr_state = false;
+                },
+                _ => {
+                    self.add_to_tldr_state = false;
+                    self.show_tldr_help = false;
+                }
             }
         }
         else {
@@ -125,6 +154,10 @@ impl App {
                     self.show_man_help = true
                 },
                 KeyCode::Char('M') => self.enter_man_help(),
+                KeyCode::Char('t') => {
+                    self.show_tldr_help = true
+                },
+                KeyCode::Char('T') => self.enter_tldr_help(),
                 KeyCode::Char('/') => {
                     self.filter_mode = true;
                     // self.update_filter();
@@ -222,8 +255,106 @@ impl App {
 
         let command = commands[index];
 
-        let man_output = Command::new("man").arg(command).status().expect("No entries in the manual for this command.");
+        Command::new("man").arg(command).status().expect("No entries in the manual for this command.");
 
+    }
+
+    fn check_in_tldr_cache(&self, command: &String) -> bool {
+        let command_output = Command::new("tldr").arg("-l").output();
+        let tldr_cache = match command_output {
+            Ok(tldr_cache) => {
+                if tldr_cache.status.success() {
+                    let result = String::from_utf8_lossy(&tldr_cache.stdout).to_string();
+                    result
+                }
+                else {
+                    let err_msg = String::from_utf8_lossy(&tldr_cache.stderr).to_string();
+                    err_msg
+                }
+            }
+            Err(_) => {
+                let tldr_not_installed_message = String::from("Error: Check if TLDR is installed in your system.").to_string();
+                tldr_not_installed_message
+            }
+        };
+        tldr_cache.contains(command)
+    }
+
+    fn render_tldr_help(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.show_tldr_help {
+            return
+        };
+
+        let index = self.list_state.selected().unwrap();
+        let commands = Vec::from_iter(self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
+
+        let command = commands[index];
+
+        if !self.check_in_tldr_cache(command) {
+            self.add_to_tldr_state = true;
+            self.show_tldr_help = false;
+            return
+        }
+
+        let tldr_output = Command::new("tldr").arg(command).output().unwrap();
+
+        let output = match str::from_utf8(&tldr_output.stdout){
+            Ok(val) => val,
+            Err(_) => "Unexpected error when reading the output."
+        };
+
+        let text = if output.len() > 0 { output } else { "No entries in tldr for this command" };
+
+        Clear.render(area, buf);
+        Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from(command)).centered())).render(area, buf);
+    }
+
+    fn enter_tldr_help(&mut self) {
+        let index = self.list_state.selected().unwrap();
+        let commands = Vec::from_iter(self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
+
+        let command = commands[index];
+
+        if !self.check_in_tldr_cache(command) {
+            self.tldr_command = String::from(command);
+            self.add_to_tldr_state = true;
+            self.show_tldr_help = false;
+            return
+        }
+
+        Command::new("tldr").arg(command).status().expect("No entries in the manual for this command.");
+    }
+
+    fn render_add_to_tldr_cache(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.add_to_tldr_state {
+            return
+        }
+        let popup_area = self.center(
+            area,
+            Constraint::Percentage(30),
+            Constraint::Length(3)
+        );
+        let popup = Paragraph::new(Text::raw("The command is not in the TLDR cache. Press Y to add it to the cache (it might take a while)")).block(Block::bordered().title(Line::from(" Warning ").centered()));
+        Clear.render(popup_area, buf);
+        popup.render(popup_area, buf);
+    }
+
+    fn add_to_tldr_cache(&mut self) {
+        disable_raw_mode().unwrap();
+        crossterm::execute!(io::stdout(), LeaveAlternateScreen).unwrap();
+        Command::new("tldr").arg(&self.tldr_command).status().unwrap();
+        std::io::stdin().read_line(&mut String::new()).unwrap();
+
+        // Step 4: Re-enter the UI
+        enable_raw_mode().unwrap();
+        crossterm::execute!(io::stdout(), EnterAlternateScreen).unwrap();
+        println!("Exiting COMRAD")
     }
 
 }
@@ -266,11 +397,14 @@ impl Widget for &mut App {
         let list =List::new(commands)
             .block(block)
             .highlight_symbol(">> ")
-            .highlight_spacing(HighlightSpacing::Always);
+            .highlight_spacing(HighlightSpacing::Always)
+            .highlight_style(SELECTED_STYLE);
         
         StatefulWidget::render(list, area, buf, &mut self.list_state);
 
         self.render_filter_popup(area, buf);
         self.render_man_help(area, buf);
+        self.render_tldr_help(area, buf);
+        self.render_add_to_tldr_cache(area, buf);
     }
 }
