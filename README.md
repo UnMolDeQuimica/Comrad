@@ -53,10 +53,10 @@ Press 'q' to exit comrad.
 ![Comrad TUI](assets/comrad.png)
 
 ## Comrad Filter
-![Comrad TUI](assets/fiter-example.png)
+![Comrad Filter](assets/filter-example.png)
 
 ## Comrad Man Page
-![Comrad TUI](assets/man-nvim-example.png)
+![Comrad Man Page](assets/man-nvim-example.png)
 
 ## Comrad TLDR Page
-![Comrad TUI](assets/tldr-allacritty-example.png)
+![Comrad TLDR Page](assets/tldr-alacritty-example.png)
