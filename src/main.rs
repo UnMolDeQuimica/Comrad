@@ -1,3 +1,4 @@
+use core::str;
 use std::{env, fs, path::Path, io, process::Command};
 
 use crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind};
@@ -23,6 +24,7 @@ pub struct App {
     exit: bool,
     filter_mode: bool,
     filter_query: String,
+    show_man_help: bool,
 }
 
 impl App {
@@ -77,25 +79,7 @@ impl App {
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
-        if !self.filter_mode {
-
-            match key_event.code {
-                KeyCode::Char('q') => self.exit(),
-                KeyCode::Char('g') => self.first(),
-                KeyCode::Char('G') => self.last(),
-                KeyCode::Char('j') => self.previous(),
-                KeyCode::Char('k') => self.next(),
-                KeyCode::Char('/') => {
-                    self.filter_mode = true;
-                    // self.update_filter();
-                },
-                KeyCode::Up => self.previous(),
-                KeyCode::Down => self.next(),
-                _ => {}
-            }
-        }
-
-        else {
+        if self.filter_mode {
             match key_event.code {
                 KeyCode::Enter if self.filter_mode => {
                     self.filter_mode = false;
@@ -119,6 +103,37 @@ impl App {
 
                 _ => {}
             }
+        }
+        else if self.show_man_help {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_man_help = false;
+                    // self.list_state.select(Some(0));
+                }
+
+                _ => {}
+            }
+        }
+        else {
+            match key_event.code {
+                KeyCode::Char('q') => self.exit(),
+                KeyCode::Char('g') => self.first(),
+                KeyCode::Char('G') => self.last(),
+                KeyCode::Char('j') => self.previous(),
+                KeyCode::Char('k') => self.next(),
+                KeyCode::Char('m') => {
+                    self.show_man_help = true
+                },
+                KeyCode::Char('M') => self.enter_man_help(),
+                KeyCode::Char('/') => {
+                    self.filter_mode = true;
+                    // self.update_filter();
+                },
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
+                _ => {}
+            }
+
         }
     }
 
@@ -171,6 +186,46 @@ impl App {
         popup.render(popup_area, buf)
     }
 
+    fn render_man_help(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.show_man_help {
+            return
+        };
+
+        let index = self.list_state.selected().unwrap();
+        let commands = Vec::from_iter(self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
+
+        let command = commands[index];
+
+        let man_output = Command::new("man").arg(command).output().unwrap();
+
+        let output = match str::from_utf8(&man_output.stdout) {
+            Ok(val) => val,
+            Err(_) => "Unexpected error when reading the output."
+        };
+
+        let text = if output.len() > 0 { output } else { "No entries in the manual for this command" };
+
+        Clear.render(area, buf);
+        Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from(command)).centered())).render(area, buf);
+    }
+
+    fn enter_man_help(&mut self) {
+        
+        let index = self.list_state.selected().unwrap();
+        let commands = Vec::from_iter(self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
+
+        let command = commands[index];
+
+        let man_output = Command::new("man").arg(command).status().expect("No entries in the manual for this command.");
+
+    }
+
 }
 
 impl Widget for &mut App {
@@ -216,5 +271,6 @@ impl Widget for &mut App {
         StatefulWidget::render(list, area, buf, &mut self.list_state);
 
         self.render_filter_popup(area, buf);
+        self.render_man_help(area, buf);
     }
 }
