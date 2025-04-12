@@ -4,9 +4,8 @@ use std::{env, fs, io, process::Command};
 use crossterm::{event::{self, Event, KeyCode, KeyEvent, KeyEventKind}, terminal::{disable_raw_mode, enable_raw_mode, LeaveAlternateScreen, EnterAlternateScreen}};
 use ratatui::{
     buffer::Buffer, layout::{Constraint, Flex, Layout, Rect}, style::{
-        palette::tailwind::{BLUE, GREEN, SLATE},
-        Color, Modifier, Style, Stylize,
-    }, symbols::border, text::{Line, Text}, widgets::{Block, HighlightSpacing, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, Wrap, Clear}, DefaultTerminal, Frame
+        palette::tailwind::SLATE, Modifier, Style, Stylize,
+    }, symbols::border, text::{Line, Text}, widgets::{Block, HighlightSpacing, List, ListItem, ListState, Paragraph, StatefulWidget, Widget, Clear}, DefaultTerminal, Frame
 };
 
 const SELECTED_STYLE: Style = Style::new().bg(SLATE.c800).add_modifier(Modifier::BOLD);
@@ -35,14 +34,14 @@ impl App {
     fn next(&mut self) {
         let i = self.list_state.selected().unwrap();
         if i < self.commands.len() - 1 {
-            self.list_state.select((Some(i + 1)));
+            self.list_state.select(Some(i + 1));
         }
     }
 
     fn previous(&mut self) {
         let i = self.list_state.selected().unwrap();
         if i > 0 {
-            self.list_state.select((Some(i - 1)));
+            self.list_state.select(Some(i - 1));
         }
     }
 
@@ -157,7 +156,6 @@ impl App {
                 KeyCode::Char('t') => {
                     self.show_tldr_help = true
                 },
-                KeyCode::Char('T') => self.enter_tldr_help(),
                 KeyCode::Char('/') => {
                     self.filter_mode = true;
                     // self.update_filter();
@@ -312,35 +310,16 @@ impl App {
         Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from(command)).centered())).render(area, buf);
     }
 
-    fn enter_tldr_help(&mut self) {
-        let index = self.list_state.selected().unwrap();
-        let commands = Vec::from_iter(self.commands
-            .iter()
-            .filter(|cmd|
-            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
-
-        let command = commands[index];
-
-        if !self.check_in_tldr_cache(command) {
-            self.tldr_command = String::from(command);
-            self.add_to_tldr_state = true;
-            self.show_tldr_help = false;
-            return
-        }
-
-        Command::new("tldr").arg(command).status().expect("No entries in the manual for this command.");
-    }
-
     fn render_add_to_tldr_cache(&mut self, area: Rect, buf: &mut Buffer) {
         if !self.add_to_tldr_state {
             return
         }
         let popup_area = self.center(
             area,
-            Constraint::Percentage(30),
-            Constraint::Length(3)
+            Constraint::Length(80),
+            Constraint::Length(5)
         );
-        let popup = Paragraph::new(Text::raw("The command is not in the TLDR cache. Press Y to add it to the cache (it might take a while)")).block(Block::bordered().title(Line::from(" Warning ").centered()));
+        let popup = Paragraph::new(Text::raw(" The command is not in the TLDR cache. \n Press Y to add it to the cache (it might take a while)").centered()).block(Block::bordered().title(Line::from(" Warning ").centered()));
         Clear.render(popup_area, buf);
         popup.render(popup_area, buf);
     }
@@ -351,7 +330,6 @@ impl App {
         Command::new("tldr").arg(&self.tldr_command).status().unwrap();
         std::io::stdin().read_line(&mut String::new()).unwrap();
 
-        // Step 4: Re-enter the UI
         enable_raw_mode().unwrap();
         crossterm::execute!(io::stdout(), EnterAlternateScreen).unwrap();
         println!("Exiting COMRAD")
@@ -376,10 +354,17 @@ impl Widget for &mut App {
             "<g> ".blue().bold(),
             " Last ".into(),
             "<G> ".blue().bold(),
+            " Show man ".into(),
+            "<m> ".blue().bold(),
+            " Enter man ".into(),
+            "<M> ".blue().bold(),
+            " Show tldr ".into(),
+            "<t> ".blue().bold(),
             " Filter ".into(),
             "</>".blue().bold(),
             " Quit ".into(),
             "<q> ".blue().bold(),
+
             ]);
         
         let instructions = if self.filter_mode { filter_instructions.clone() } else { general_instructions.clone() };
