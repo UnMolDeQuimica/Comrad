@@ -46,3 +46,17 @@ Press 'M' to enter the `man` page of the current command (only available if you 
 Press 't' to show the `tldr` page of the current command (only available if you have `tldr` installed).
 
 Press 'q' to exit comrad.
+
+# Gallery
+
+## Comrad TUI
+![Comrad TUI](assets/comrad.png)
+
+## Comrad Filter
+![Comrad TUI](assets/fiter-example.png)
+
+## Comrad Man Page
+![Comrad TUI](assets/man-nvim-example.png)
+
+## Comrad TLDR Page
+![Comrad TUI](assets/tldr-allacritty-example.png)
