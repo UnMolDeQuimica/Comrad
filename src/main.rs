@@ -230,7 +230,7 @@ impl App {
                 }
             }
         }
-        commands.sort();
+        commands.sort_by(|command_a, command_b| command_a.to_lowercase().cmp(&command_b.to_lowercase()));
         commands.dedup();
         commands
     }
