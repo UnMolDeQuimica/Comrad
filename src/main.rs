@@ -19,10 +19,12 @@ Run the `comrad` command to enter the TUI.
 - You can move up and down with j and k or using the up and down arrow keys.
 - You can go to the first entry pressing 'g' and to the last entry pressing 'G'.
 - Press '/' to enter filter mode.
+- Press 'h' to show the `--help` page of the current command.
 - Press 'm' to show the `man` page of the current command (only available if you have `man` installed).
 - Press 'M' to enter the `man` page of the current command (only available if you have `man` installed).
 - Press 't' to show the `tldr` page of the current command (only available if you have `tldr` installed).
 - Press 'q' to exit comrad.
+- Press 'ESC' to go back to the commands list.
 "#
 )]
 struct Cli {
@@ -57,6 +59,7 @@ pub struct App {
     add_to_tldr_state: bool,
     tldr_command: String,
     show_help: bool,
+    show_comrad_help: bool,
 }
 
 impl App {
@@ -398,6 +401,34 @@ impl App {
         Clear.render(area, buf);
         Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from(command)).centered())).render(area, buf);
     }
+
+    fn render_comrad_help(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.show_comrad_help {
+            return
+        };
+        let text = String::from("
+You can move up and down with j and k or using the up and down arrow keys.
+
+You can go to the first entry pressing 'g' and to the last entry pressing 'G'.
+
+Press '/' to enter filter mode.
+
+Press 'h' to show the `--help` page of the current command.
+
+Press 'm' to show the `man` page of the current command (only available if you have `man` installed).
+
+Press 'M' to enter the `man` page of the current command (only available if you have `man` installed).
+
+Press 't' to show the `tldr` page of the current command (only available if you have `tldr` installed).
+
+Press 'q' to exit comrad.
+
+Press 'ESC' to go back to the commands list.
+
+        ");
+        Clear.render(area, buf);
+        Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from("Comrad Help")).centered())).centered().render(area, buf);
+    }
 }
 
 impl Widget for &mut App {
@@ -409,14 +440,8 @@ impl Widget for &mut App {
             ]);
 
         let general_instructions = Line::from(vec![
-            " Down ".into(),
-            "<j>".blue().bold(),
-            " Up ".into(),
-            "<k>".blue().bold(),
-            " First ".into(),
-            "<g> ".blue().bold(),
-            " Last ".into(),
-            "<G> ".blue().bold(),
+            " Comrad help ".into(),
+            "<H> ".blue().bold(),
             " Show help ".into(),
             "<h> ".blue().bold(),
             " Show man ".into(),
@@ -457,5 +482,6 @@ impl Widget for &mut App {
         self.render_tldr_help(area, buf);
         self.render_add_to_tldr_cache(area, buf);
         self.render_help(area, buf);
+        self.render_comrad_help(area, buf)
     }
 }
