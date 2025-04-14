@@ -143,9 +143,11 @@ impl App {
             match key_event.code {
                 KeyCode::Esc => {
                     self.show_man_help = false;
-                    // self.list_state.select(Some(0));
                 },
-
+                KeyCode::Char('j') => self.previous(),
+                KeyCode::Char('k') => self.next(),
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
                 _ => {}
             }
         }
@@ -153,9 +155,11 @@ impl App {
             match key_event.code {
                 KeyCode::Esc => {
                     self.show_tldr_help = false;
-                    // self.list_state.select(Some(0));
                 },
-
+                KeyCode::Char('j') => self.previous(),
+                KeyCode::Char('k') => self.next(),
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
                 _ => {}
             }
         }
@@ -180,6 +184,18 @@ impl App {
                 KeyCode::Esc => {
                     self.show_help = false;
                 },
+                KeyCode::Char('j') => self.previous(),
+                KeyCode::Char('k') => self.next(),
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
+                _ => {}
+            }
+        }
+        else if self.show_comrad_help {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_comrad_help = false;
+                },
                 _ => {}
             }
         }
@@ -190,8 +206,13 @@ impl App {
                 KeyCode::Char('G') => self.last(),
                 KeyCode::Char('j') => self.previous(),
                 KeyCode::Char('k') => self.next(),
+                KeyCode::Up => self.previous(),
+                KeyCode::Down => self.next(),
                 KeyCode::Char('h') => {
                     self.show_help = true;
+                },
+                KeyCode::Char('H') => {
+                    self.show_comrad_help = true;
                 },
                 KeyCode::Char('m') => {
                     self.show_man_help = true
@@ -202,10 +223,7 @@ impl App {
                 },
                 KeyCode::Char('/') => {
                     self.filter_mode = true;
-                    // self.update_filter();
                 },
-                KeyCode::Up => self.previous(),
-                KeyCode::Down => self.next(),
                 _ => {}
             }
 
