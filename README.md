@@ -40,6 +40,12 @@ cargo install --path .
 comrad
 ```
 
+5. Remove the git repo (optional)
+```
+cd ..
+rm Comrad -rf
+```
+
 # Usage
 
 Run the `comrad` command to enter the TUI.
