@@ -56,6 +56,7 @@ pub struct App {
     show_tldr_help: bool,
     add_to_tldr_state: bool,
     tldr_command: String,
+    show_help: bool,
 }
 
 impl App {
@@ -171,6 +172,14 @@ impl App {
                 }
             }
         }
+        else if self.show_help {
+            match key_event.code {
+                KeyCode::Esc => {
+                    self.show_help = false;
+                },
+                _ => {}
+            }
+        }
         else {
             match key_event.code {
                 KeyCode::Char('q') => self.exit(),
@@ -178,6 +187,9 @@ impl App {
                 KeyCode::Char('G') => self.last(),
                 KeyCode::Char('j') => self.previous(),
                 KeyCode::Char('k') => self.next(),
+                KeyCode::Char('h') => {
+                    self.show_help = true;
+                },
                 KeyCode::Char('m') => {
                     self.show_man_help = true
                 },
@@ -273,7 +285,6 @@ impl App {
     }
 
     fn enter_man_help(&mut self) {
-        
         let index = self.list_state.selected().unwrap();
         let commands = Vec::from_iter(self.commands
             .iter()
@@ -364,6 +375,29 @@ impl App {
         println!("Exiting COMRAD")
     }
 
+    fn render_help(&mut self, area: Rect, buf: &mut Buffer) {
+        if !self.show_help {
+            return
+        }
+
+        let index = self.list_state.selected().unwrap();
+        let commands = Vec::from_iter(self.commands
+            .iter()
+            .filter(|cmd|
+            cmd.to_lowercase().contains(&self.filter_query.to_lowercase())));
+
+        let command = commands[index];
+        let help_output = Command::new(command).arg("--help").output().unwrap();
+
+        let output = match str::from_utf8(&help_output.stdout){
+            Ok(val) => val,
+            Err(_) => "Unexpected error when reading the output."
+        };
+
+        let text = if output.len() > 0 { output } else { "No help implemented for this command" };
+        Clear.render(area, buf);
+        Paragraph::new(Text::raw(text)).block(Block::bordered().title(Line::from(String::from(command)).centered())).render(area, buf);
+    }
 }
 
 impl Widget for &mut App {
@@ -373,7 +407,7 @@ impl Widget for &mut App {
             " Exit filter ".into(),
             "<Esc/Enter>".blue().bold(),
             ]);
-            
+
         let general_instructions = Line::from(vec![
             " Down ".into(),
             "<j>".blue().bold(),
@@ -383,6 +417,8 @@ impl Widget for &mut App {
             "<g> ".blue().bold(),
             " Last ".into(),
             "<G> ".blue().bold(),
+            " Show help ".into(),
+            "<h> ".blue().bold(),
             " Show man ".into(),
             "<m> ".blue().bold(),
             " Enter man ".into(),
@@ -395,7 +431,7 @@ impl Widget for &mut App {
             "<q> ".blue().bold(),
 
             ]);
-        
+
         let instructions = if self.filter_mode { filter_instructions.clone() } else { general_instructions.clone() };
         let block = Block::bordered()
             .title(title.centered())
@@ -413,12 +449,13 @@ impl Widget for &mut App {
             .highlight_symbol(">> ")
             .highlight_spacing(HighlightSpacing::Always)
             .highlight_style(SELECTED_STYLE);
-        
+
         StatefulWidget::render(list, area, buf, &mut self.list_state);
 
         self.render_filter_popup(area, buf);
         self.render_man_help(area, buf);
         self.render_tldr_help(area, buf);
         self.render_add_to_tldr_cache(area, buf);
+        self.render_help(area, buf);
     }
 }
