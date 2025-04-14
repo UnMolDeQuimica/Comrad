@@ -9,9 +9,20 @@ You must have [Rust](https://www.rust-lang.org/tools/install) installed in your 
 
 ## Installation
 
+
+0. One command install
+
+```
+git clone https://github.com/UnMolDeQuimica/Comrad.git
+cd Comrad
+cargo build --release
+cargo install --path .
+```
+
 1. Clone the repository
 ```
 git clone https://github.com/UnMolDeQuimica/Comrad.git
+cd Comrad
 ```
 
 2. Build the project
